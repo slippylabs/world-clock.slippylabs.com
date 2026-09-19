@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Clock &amp; Meeting Planner // world-clock.slippylabs.com</title>
+<meta name="description" content="What time is it there, and when can everyone actually meet — a world clock with a working-hours overlap grid, daylight saving handled properly, and a link you can send. Runs entirely in your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://world-clock.slippylabs.com/">
+<meta property="og:title" content="World Clock &amp; Meeting Planner // world-clock.slippylabs.com">
+<meta property="og:description" content="What time is it there, and when can everyone actually meet — a world clock with a working-hours overlap grid, daylight saving handled properly, and a link you can send. Runs entirely in your browser.">
+<meta property="og:image" content="https://world-clock.slippylabs.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="World Clock &amp; Meeting Planner // world-clock.slippylabs.com">
+<meta name="twitter:description" content="What time is it there, and when can everyone actually meet — a world clock with a working-hours overlap grid, daylight saving handled properly, and a link you can send. Runs entirely in your browser.">
+<meta name="twitter:image" content="https://world-clock.slippylabs.com/og-image.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2234%22%20r%3D%2222%22%20fill%3D%22%231c8a52%22%20stroke%3D%22%2339ff8f%22%20stroke-width%3D%222%22%2F%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2216%22%20r%3D%228%22%20fill%3D%22%231c8a52%22%20stroke%3D%22%2339ff8f%22%20stroke-width%3D%222%22%2F%3E%3Ccircle%20cx%3D%2244%22%20cy%3D%2216%22%20r%3D%228%22%20fill%3D%22%231c8a52%22%20stroke%3D%22%2339ff8f%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E">
+<meta name="theme-color" content="#050b10">
+<link rel="stylesheet" href="style.css?v=1">
+<script>/* perf-lite: drop blend/blur effects on low-power devices. ?fx=lite or ?fx=full to override (persisted). */
+(function(){try{var k="slippy-fx",m=location.search.match(/[?&]fx=(lite|full)/),v=m?m[1]:localStorage.getItem(k);if(m)localStorage.setItem(k,v);if(v==="lite"||(v!=="full"&&(navigator.hardwareConcurrency||8)<=2))document.documentElement.classList.add("perf-lite");}catch(e){}})();</script>
+</head>
+<body>
+
+<div class="starfield"></div>
+<div class="scanlines"></div>
+
+<main class="page-wrap">
+  <div class="hud-panel wide">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <div class="callsign-row">
+      <div class="toad-avatar-wrap">
+        <svg class="toad-avatar" width="46" height="46" viewBox="0 0 64 64">
+          <circle cx="32" cy="34" r="22" fill="#1c8a52" stroke="#39ff8f" stroke-width="2"/>
+          <circle cx="20" cy="16" r="8" fill="#1c8a52" stroke="#39ff8f" stroke-width="2"/>
+          <circle cx="44" cy="16" r="8" fill="#1c8a52" stroke="#39ff8f" stroke-width="2"/>
+          <circle cx="20" cy="16" r="3.5" fill="#050b10"/>
+          <circle cx="44" cy="16" r="3.5" fill="#050b10"/>
+          <ellipse cx="24" cy="32" rx="4.5" ry="5.5" fill="#050b10"/>
+          <ellipse cx="40" cy="32" rx="4.5" ry="5.5" fill="#050b10"/>
+          <circle cx="24" cy="30" r="1.4" fill="#39ff8f"/>
+          <circle cx="40" cy="30" r="1.4" fill="#39ff8f"/>
+          <path d="M22 42 Q32 48 42 42" stroke="#050b10" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div class="lock-reticle"></div>
+      </div>
+      <span class="callsign">Workshop Division // Tool</span>
+      <div class="nav-links">
+        <a href="https://projects.slippylabs.com/" class="logout-link">← Archive</a>
+      </div>
+    </div>
+
+
+    <h1>WORLD CLOCK &amp; MEETING PLANNER</h1>
+    <p class="subtitle">Add the cities you care about, drag the time, and read across. The grid underneath shows the hours where everybody is awake &mdash; which is usually fewer than you hoped.</p>
+
+    <div class="wc-add-row">
+      <div class="tool-field-row">
+        <label class="tool-field-label" for="city-search">Add a city or time zone</label>
+        <input class="tool-text-input" id="city-search" type="text" spellcheck="false"
+               autocapitalize="off" autocomplete="off" role="combobox" aria-expanded="false"
+               aria-controls="city-results" placeholder="Tokyo · Berlin · America/Denver · GMT">
+        <div class="wc-results hidden" id="city-results" role="listbox"></div>
+      </div>
+      <div class="tool-field-row">
+        <label class="tool-field-label" for="home-select">Home &mdash; the row everything else is read against</label>
+        <select class="tool-select" id="home-select"></select>
+      </div>
+    </div>
+
+    <div class="tool-controls">
+      <button class="tool-btn" id="now-btn">Now</button>
+      <button class="tool-btn ghost" id="copy-link-btn">Copy Link</button>
+      <span class="copy-toast" id="copy-toast">copied</span>
+      <button class="tool-btn ghost" id="reset-btn">Reset Cities</button>
+    </div>
+
+    <div class="tool-field-row">
+      <label class="tool-field-label" for="time-slider">
+        Move the time &mdash; <span id="slider-label">now</span>
+      </label>
+      <div class="tool-slider-row">
+        <input type="range" id="time-slider" min="0" max="1439" step="15" value="720">
+        <span class="wc-slider-value" id="time-value">—</span>
+      </div>
+    </div>
+    <div class="tool-field-row">
+      <label class="tool-field-label" for="date-input">Date, in the home zone</label>
+      <input class="tool-text-input wc-date" id="date-input" type="date">
+    </div>
+
+    <div class="cert-section-label">Clocks</div>
+    <div class="net-table-wrap">
+      <table class="net-table wc-clocks" id="clock-table"></table>
+    </div>
+
+    <div class="cert-section-label">When can everyone meet</div>
+    <div class="wc-grid-wrap">
+      <div id="grid-host"></div>
+    </div>
+    <div class="wc-legend">
+      <span><i class="wc-swatch wc-work"></i> working hours</span>
+      <span><i class="wc-swatch wc-awake"></i> awake, but out of hours</span>
+      <span><i class="wc-swatch wc-sleep"></i> asleep</span>
+      <span><i class="wc-swatch wc-now"></i> the hour you picked</span>
+    </div>
+    <p class="tool-note" id="overlap-note"></p>
+
+    <div class="tool-controls">
+      <label class="tool-field-label" for="work-start">Working hours</label>
+      <select class="tool-select" id="work-start"></select>
+      <label class="tool-field-label" for="work-end">to</label>
+      <select class="tool-select" id="work-end"></select>
+    </div>
+
+    <p class="tool-note">
+      Offsets come from the browser's own copy of the IANA time zone database, asked afresh for
+      every instant &mdash; so daylight saving is right by construction, including the places that
+      shift by thirty minutes rather than an hour, and the southern hemisphere, which moves the
+      other way. Each row says when that city next changes its clocks. That copy has a version,
+      though: when a government changes the rules, your browser learns about it in its next update,
+      and until then a future date may be off by an hour. Two browsers can honestly disagree about
+      2027.
+    </p>
+    <p class="tool-note">
+      Two hours of the year do not behave. When clocks spring forward, a wall-clock time is skipped
+      entirely &mdash; ask for it and this page tells you so, and shows the instant the clock jumps
+      to. When they fall back, an hour happens twice; the earlier of the two is used, and the row
+      says so. Most tools quietly pick one and say nothing.
+    </p>
+    <div class="comm-window">
+      <div class="comm-portrait">
+        <svg width="36" height="36" viewBox="0 0 64 64">
+          <circle cx="32" cy="34" r="22" fill="#1c8a52" stroke="#39ff8f" stroke-width="2"/>
+          <circle cx="20" cy="16" r="8" fill="#1c8a52" stroke="#39ff8f" stroke-width="2"/>
+          <circle cx="44" cy="16" r="8" fill="#1c8a52" stroke="#39ff8f" stroke-width="2"/>
+          <circle cx="20" cy="16" r="3.5" fill="#050b10"/>
+          <circle cx="44" cy="16" r="3.5" fill="#050b10"/>
+          <ellipse cx="24" cy="32" rx="4.5" ry="5.5" fill="#050b10"/>
+          <ellipse cx="40" cy="32" rx="4.5" ry="5.5" fill="#050b10"/>
+          <circle cx="24" cy="30" r="1.4" fill="#39ff8f"/>
+          <circle cx="40" cy="30" r="1.4" fill="#39ff8f"/>
+          <path d="M22 42 Q32 48 42 42" stroke="#050b10" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="comm-body">
+        <div class="comm-label"><span class="dot"></span> Incoming Transmission &mdash; Slippy</div>
+        <p>&quot;Nobody has ever regretted checking the time zone twice.&quot;</p>
+      </div>
+    </div>
+
+    <a href="https://projects.slippylabs.com/" class="hud-btn">← Back to Archive</a>
+  </div>
+</main>
+
+
+<script>
+/* ---- time zones ------------------------------------------------------------
+   Everything here goes through the browser's own IANA database via Intl, asked
+   per instant. Nothing is hard-coded about daylight saving, because anything
+   hard-coded about daylight saving is wrong within a year or two — governments
+   change the rules, and several places shift by 30 or 45 minutes.
+
+   The one primitive worth reading carefully is offsetAt(): format an instant in
+   the target zone, read the wall-clock fields back, and treat them as if they
+   were UTC. The difference between that and the real instant IS the offset. It
+   needs no table and cannot disagree with the formatter the page displays. */
+
+const PARTS_FMT = new Map();
+
+function partsFormatter(zone) {
+  let f = PARTS_FMT.get(zone);
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      weekday: 'short',
+    });
+    PARTS_FMT.set(zone, f);
+  }
+  return f;
+}
+
+function wallPartsAt(zone, instantMs) {
+  const parts = partsFormatter(zone).formatToParts(new Date(instantMs));
+  const get = (t) => {
+    const p = parts.find((q) => q.type === t);
+    return p ? p.value : '';
+  };
+  // "24" appears at midnight in some ICU versions; normalise it to 0
+  const hour = Number(get('hour')) % 24;
+  return {
+    year: Number(get('year')),
+    month: Number(get('month')),
+    day: Number(get('day')),
+    hour,
+    minute: Number(get('minute')),
+    second: Number(get('second')),
+    weekday: get('weekday'),
+  };
+}
+
+/* Offset of `zone` at this instant, in minutes east of UTC. */
+function offsetAt(zone, instantMs) {
+  const w = wallPartsAt(zone, instantMs);
+  const asUTC = Date.UTC(w.year, w.month - 1, w.day, w.hour, w.minute, w.second);
+  return Math.round((asUTC - Math.floor(instantMs / 1000) * 1000) / 60000);
+}
+
+function formatOffset(minutes) {
+  const sign = minutes < 0 ? '-' : '+';
+  const abs = Math.abs(minutes);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  return `UTC${sign}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function zoneAbbrev(zone, instantMs) {
+  const f = new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'short' });
+  const part = f.formatToParts(new Date(instantMs)).find((p) => p.type === 'timeZoneName');
+  return part ? part.value : '';
+}
+
+/* The instant at which a wall-clock time occurs in a zone.
+
+   Wall time is not a function of instant in both directions: springing forward
+   skips an hour (that wall time never happens) and falling back repeats one (it
+   happens twice). Guessing an offset and correcting once lands on the right
+   instant whenever one exists; the flags say which of the two awkward cases you
+   are in, rather than silently picking. */
+function instantFromWall(zone, wall) {
+  const naive = Date.UTC(wall.year, wall.month - 1, wall.day, wall.hour, wall.minute || 0, 0);
+  /* Two candidates, one per offset in force either side of this wall time: the
+     instant is naive minus the offset, and a candidate is real only if the zone
+     is actually using that offset at it. Both real and different means the wall
+     time happens twice; neither means it never happens. Working from the two
+     offsets rather than stepping by a fixed hour is what makes this right for
+     the places that shift by 30 or 45 minutes — Lord Howe moves its clocks by
+     half an hour, so the repeated window there is half an hour long. */
+  const before = offsetAt(zone, naive - 86400000);
+  const after = offsetAt(zone, naive + 86400000);
+  const candidates = [...new Set([before, after])]
+    .map((off) => ({ off, t: naive - off * 60000 }))
+    .filter((c) => offsetAt(zone, c.t) === c.off)
+    .sort((a, b) => a.t - b.t);
+  if (!candidates.length) {
+    // skipped: the clocks jump straight over this wall time
+    return { instant: naive - before * 60000, nonexistent: true, ambiguous: false };
+  }
+  return {
+    instant: candidates[0].t,
+    nonexistent: false,
+    ambiguous: candidates.length > 1,
+  };
+}
+
+/* The next moment this zone's offset changes, searched by bisection over the
+   following year. Undefined for zones that no longer observe daylight saving —
+   which is most of them, and the answer there is simply "no change coming". */
+function nextTransition(zone, fromMs, horizonDays = 400) {
+  const start = fromMs;
+  const end = fromMs + horizonDays * 86400000;
+  const startOffset = offsetAt(zone, start);
+  if (offsetAt(zone, end) === startOffset) {
+    // no net change, but there may be a pair of changes inside the window
+    const step = 86400000;
+    let prev = startOffset;
+    for (let t = start; t <= end; t += step) {
+      const o = offsetAt(zone, t);
+      if (o !== prev) return bisectTransition(zone, t - step, t);
+      prev = o;
+    }
+    return null;
+  }
+  const step = 86400000;
+  let lo = start;
+  for (let t = start; t <= end; t += step) {
+    if (offsetAt(zone, t) !== startOffset) { return bisectTransition(zone, lo, t); }
+    lo = t;
+  }
+  return null;
+}
+
+function bisectTransition(zone, loMs, hiMs) {
+  const before = offsetAt(zone, loMs);
+  let lo = loMs;
+  let hi = hiMs;
+  while (hi - lo > 60000) {
+    const mid = lo + Math.floor((hi - lo) / 2);
+    if (offsetAt(zone, mid) === before) lo = mid;
+    else hi = mid;
+  }
+  return { at: hi, from: before, to: offsetAt(zone, hi) };
+}
+
+/* Standard time is the smaller offset the zone uses across the year, so a zone
+   is on daylight saving whenever it is currently using the larger one. */
+function isDaylightSaving(zone, instantMs) {
+  const year = wallPartsAt(zone, instantMs).year;
+  const jan = offsetAt(zone, Date.UTC(year, 0, 15));
+  const jul = offsetAt(zone, Date.UTC(year, 6, 15));
+  const std = Math.min(jan, jul);
+  return offsetAt(zone, instantMs) > std;
+}
+
+/* Classify an hour for the meeting grid. */
+function hourClass(hour, workStart, workEnd) {
+  if (hour >= workStart && hour < workEnd) return 'work';
+  if (hour >= 7 && hour < 23) return 'awake';
+  return 'sleep';
+}
+
+/* For each hour of the home day, how every zone is doing. Returns one row per
+   zone plus a per-hour summary, which is what makes "when can we meet"
+   answerable rather than a puzzle. */
+function overlapGrid(zones, homeDayStartMs, workStart, workEnd, hours = 24) {
+  const rows = zones.map((z) => {
+    const cells = [];
+    for (let h = 0; h < hours; h++) {
+      const t = homeDayStartMs + h * 3600000;
+      const w = wallPartsAt(z.zone, t);
+      cells.push({ hour: w.hour, day: w.day, weekday: w.weekday, kind: hourClass(w.hour, workStart, workEnd) });
+    }
+    return { zone: z, cells };
+  });
+  const summary = [];
+  for (let h = 0; h < hours; h++) {
+    const kinds = rows.map((r) => r.cells[h].kind);
+    summary.push({
+      working: kinds.filter((k) => k === 'work').length,
+      asleep: kinds.filter((k) => k === 'sleep').length,
+      all: kinds.every((k) => k === 'work'),
+    });
+  }
+  return { rows, summary };
+}
+
+/* The longest runs of hours where nobody is asleep, best first. */
+function bestWindows(grid) {
+  const runs = [];
+  let start = -1;
+  for (let h = 0; h <= grid.summary.length; h++) {
+    const good = h < grid.summary.length && grid.summary[h].asleep === 0;
+    if (good && start < 0) start = h;
+    if (!good && start >= 0) {
+      runs.push({ start, end: h, length: h - start,
+        working: Math.min(...grid.summary.slice(start, h).map((s) => s.working)) });
+      start = -1;
+    }
+  }
+  runs.sort((a, b) => b.working - a.working || b.length - a.length);
+  return runs;
+}
+
+/* ---- cities ---------------------------------------------------------------
+   A curated list for the picker; every IANA zone the browser knows is also
+   searchable, so nothing is actually missing. */
+const CITIES = [
+  ['London', 'Europe/London', 'GB'], ['Dublin', 'Europe/Dublin', 'IE'],
+  ['Lisbon', 'Europe/Lisbon', 'PT'], ['Madrid', 'Europe/Madrid', 'ES'],
+  ['Paris', 'Europe/Paris', 'FR'], ['Brussels', 'Europe/Brussels', 'BE'],
+  ['Amsterdam', 'Europe/Amsterdam', 'NL'], ['Berlin', 'Europe/Berlin', 'DE'],
+  ['Zurich', 'Europe/Zurich', 'CH'], ['Rome', 'Europe/Rome', 'IT'],
+  ['Stockholm', 'Europe/Stockholm', 'SE'], ['Oslo', 'Europe/Oslo', 'NO'],
+  ['Helsinki', 'Europe/Helsinki', 'FI'], ['Warsaw', 'Europe/Warsaw', 'PL'],
+  ['Athens', 'Europe/Athens', 'GR'], ['Istanbul', 'Europe/Istanbul', 'TR'],
+  ['Kyiv', 'Europe/Kyiv', 'UA'], ['Moscow', 'Europe/Moscow', 'RU'],
+  ['Reykjavik', 'Atlantic/Reykjavik', 'IS'],
+  ['New York', 'America/New_York', 'US'], ['Toronto', 'America/Toronto', 'CA'],
+  ['Chicago', 'America/Chicago', 'US'], ['Denver', 'America/Denver', 'US'],
+  ['Phoenix', 'America/Phoenix', 'US'], ['Los Angeles', 'America/Los_Angeles', 'US'],
+  ['Vancouver', 'America/Vancouver', 'CA'], ['Anchorage', 'America/Anchorage', 'US'],
+  ['Honolulu', 'Pacific/Honolulu', 'US'], ['Mexico City', 'America/Mexico_City', 'MX'],
+  ['Bogotá', 'America/Bogota', 'CO'], ['Lima', 'America/Lima', 'PE'],
+  ['Santiago', 'America/Santiago', 'CL'], ['Buenos Aires', 'America/Argentina/Buenos_Aires', 'AR'],
+  ['São Paulo', 'America/Sao_Paulo', 'BR'],
+  ['Lagos', 'Africa/Lagos', 'NG'], ['Accra', 'Africa/Accra', 'GH'],
+  ['Cairo', 'Africa/Cairo', 'EG'], ['Nairobi', 'Africa/Nairobi', 'KE'],
+  ['Johannesburg', 'Africa/Johannesburg', 'ZA'],
+  ['Dubai', 'Asia/Dubai', 'AE'], ['Tehran', 'Asia/Tehran', 'IR'],
+  ['Karachi', 'Asia/Karachi', 'PK'], ['Mumbai', 'Asia/Kolkata', 'IN'],
+  ['Bengaluru', 'Asia/Kolkata', 'IN'], ['Kathmandu', 'Asia/Kathmandu', 'NP'],
+  ['Dhaka', 'Asia/Dhaka', 'BD'], ['Bangkok', 'Asia/Bangkok', 'TH'],
+  ['Jakarta', 'Asia/Jakarta', 'ID'], ['Singapore', 'Asia/Singapore', 'SG'],
+  ['Hong Kong', 'Asia/Hong_Kong', 'HK'], ['Shanghai', 'Asia/Shanghai', 'CN'],
+  ['Taipei', 'Asia/Taipei', 'TW'], ['Seoul', 'Asia/Seoul', 'KR'],
+  ['Tokyo', 'Asia/Tokyo', 'JP'], ['Manila', 'Asia/Manila', 'PH'],
+  ['Perth', 'Australia/Perth', 'AU'], ['Adelaide', 'Australia/Adelaide', 'AU'],
+  ['Brisbane', 'Australia/Brisbane', 'AU'], ['Sydney', 'Australia/Sydney', 'AU'],
+  ['Lord Howe Island', 'Australia/Lord_Howe', 'AU'],
+  ['Auckland', 'Pacific/Auckland', 'NZ'], ['Chatham Islands', 'Pacific/Chatham', 'NZ'],
+  ['Honiara', 'Pacific/Guadalcanal', 'SB'], ['Apia', 'Pacific/Apia', 'WS'],
+  ['UTC', 'UTC', ''],
+].map(([name, zone, country]) => ({ name, zone, country }));
+
+function searchPlaces(query, allZones) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const hits = [];
+  for (const c of CITIES) {
+    if (c.name.toLowerCase().includes(q) || c.zone.toLowerCase().includes(q)) hits.push(c);
+  }
+  for (const z of allZones) {
+    if (hits.some((h) => h.zone === z)) continue;
+    if (z.toLowerCase().includes(q)) {
+      hits.push({ name: z.split('/').pop().replace(/_/g, ' '), zone: z, country: '' });
+    }
+  }
+  return hits.slice(0, 12);
+}
+
+/* ==== UI ==== */
+
+const $ = (id) => document.getElementById(id);
+const ALL_ZONES = (typeof Intl.supportedValuesOf === 'function')
+  ? Intl.supportedValuesOf('timeZone') : CITIES.map((c) => c.zone);
+
+const DEFAULTS = ['Europe/London', 'America/New_York', 'America/Los_Angeles', 'Asia/Tokyo'];
+let places = [];
+let homeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+let pinned = null;          // the instant being shown; null means "now"
+let workStart = 9;
+let workEnd = 17;
+let tickTimer = null;
+
+function nameForZone(zone) {
+  const c = CITIES.find((x) => x.zone === zone);
+  return c ? c.name : zone.split('/').pop().replace(/_/g, ' ');
+}
+
+function currentInstant() {
+  return pinned === null ? Date.now() : pinned;
+}
+
+/* the midnight that starts the home zone's day containing `instant` */
+function homeDayStart(instant) {
+  const w = wallPartsAt(homeZone, instant);
+  return instantFromWall(homeZone, { year: w.year, month: w.month, day: w.day, hour: 0, minute: 0 }).instant;
+}
+
+function render() {
+  const now = currentInstant();
+  renderClocks(now);
+  renderGrid(now);
+  renderControls(now);
+}
+
+function renderClocks(now) {
+  const rows = places.map((p) => {
+    const w = wallPartsAt(p.zone, now);
+    const off = offsetAt(p.zone, now);
+    const homeOff = offsetAt(homeZone, now);
+    const delta = (off - homeOff) / 60;
+    const dst = isDaylightSaving(p.zone, now);
+    const next = nextTransition(p.zone, now);
+    const diff = delta === 0 ? 'same as home'
+      : `${delta > 0 ? '+' : '−'}${Math.abs(delta) % 1 ? Math.abs(delta).toFixed(2).replace(/0$/, '') : Math.abs(delta)} h`;
+    const night = w.hour < 7 || w.hour >= 23;
+    return `<tr class="${p.zone === homeZone ? 'wc-home' : ''}">
+      <td>${p.name}${p.zone === homeZone ? ' <span class="wc-tag">home</span>' : ''}</td>
+      <td class="wc-time ${night ? 'wc-night' : ''}">${String(w.hour).padStart(2, '0')}:${String(w.minute).padStart(2, '0')}</td>
+      <td>${w.weekday} ${String(w.day).padStart(2, '0')}/${String(w.month).padStart(2, '0')}</td>
+      <td>${diff}</td>
+      <td>${formatOffset(off)} ${zoneAbbrev(p.zone, now)}${dst ? ' <span class="wc-dst">DST</span>' : ''}</td>
+      <td>${next ? `${new Date(next.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: p.zone })} (${(next.to - next.from) > 0 ? '+' : '−'}${Math.abs(next.to - next.from)} min)` : 'no change'}</td>
+      <td><button class="wc-remove" data-zone="${p.zone}" data-name="${p.name}" aria-label="Remove ${p.name}">×</button></td>
+    </tr>`;
+  }).join('');
+  $('clock-table').innerHTML = `<thead><tr>
+      <th>City</th><th>Time</th><th>Date</th><th>vs home</th><th>Offset</th>
+      <th>Next clock change</th><th></th>
+    </tr></thead><tbody>${rows}</tbody>`;
+}
+
+function renderGrid(now) {
+  const dayStart = homeDayStart(now);
+  const grid = overlapGrid(places, dayStart, workStart, workEnd);
+  const nowHour = Math.floor((now - dayStart) / 3600000);
+  const head = ['<div class="wc-grid" style="grid-template-columns: 150px repeat(24, 1fr)">'];
+  head.push('<div class="wc-cell wc-corner">local hour →</div>');
+  for (let h = 0; h < 24; h++) {
+    head.push(`<div class="wc-cell wc-head${h === nowHour ? ' wc-now-col' : ''}">${String(h).padStart(2, '0')}</div>`);
+  }
+  for (const row of grid.rows) {
+    head.push(`<div class="wc-cell wc-rowhead">${row.zone.name}</div>`);
+    row.cells.forEach((c, h) => {
+      head.push(`<div class="wc-cell wc-${c.kind}${h === nowHour ? ' wc-now-col' : ''}"
+        title="${row.zone.name} ${String(c.hour).padStart(2, '0')}:00 ${c.weekday}">${String(c.hour).padStart(2, '0')}</div>`);
+    });
+  }
+  head.push('</div>');
+  $('grid-host').innerHTML = head.join('');
+
+  const windows = bestWindows(grid);
+  const note = $('overlap-note');
+  if (!places.length) {
+    note.textContent = 'Add some cities to see where the day overlaps.';
+  } else if (!windows.length) {
+    note.innerHTML = `<span class="wc-bad">There is no hour of this day when everybody is awake.</span>
+      Somebody is going to be up late — the grid shows who is closest.`;
+  } else {
+    const w = windows[0];
+    const fmt = (h) => `${String((h + 24) % 24).padStart(2, '0')}:00`;
+    note.innerHTML = `Best window, in home time: <strong>${fmt(w.start)}–${fmt(w.end)}</strong>
+      (${w.length} hour${w.length === 1 ? '' : 's'} with nobody asleep${w.working === places.length
+        ? ', and everybody inside working hours' : `, ${w.working} of ${places.length} inside working hours`}).
+      ${windows.length > 1 ? `${windows.length - 1} other window${windows.length > 2 ? 's' : ''} exist${windows.length === 2 ? 's' : ''}.` : ''}`;
+  }
+}
+
+function renderControls(now) {
+  const w = wallPartsAt(homeZone, now);
+  $('time-value').textContent = `${String(w.hour).padStart(2, '0')}:${String(w.minute).padStart(2, '0')}`;
+  $('slider-label').textContent = pinned === null ? 'now, ticking' : 'pinned';
+  if (pinned !== null) $('time-slider').value = String(w.hour * 60 + w.minute);
+  $('date-input').value = `${w.year}-${String(w.month).padStart(2, '0')}-${String(w.day).padStart(2, '0')}`;
+  writeHash();
+}
+
+/* ---- interaction ---- */
+
+function addPlace(zone, name) {
+  if (places.some((p) => p.zone === zone && p.name === name)) return;
+  places.push({ zone, name: name || nameForZone(zone) });
+  syncHomeOptions();
+  render();
+}
+
+function syncHomeOptions() {
+  const zones = [...new Set(places.map((p) => p.zone))];
+  if (!zones.includes(homeZone)) zones.unshift(homeZone);
+  $('home-select').innerHTML = zones
+    .map((z) => `<option value="${z}"${z === homeZone ? ' selected' : ''}>${nameForZone(z)} — ${z}</option>`)
+    .join('');
+}
+
+$('city-search').addEventListener('input', (e) => {
+  const box = $('city-results');
+  const hits = searchPlaces(e.target.value, ALL_ZONES);
+  if (!hits.length) {
+    box.classList.add('hidden');
+    $('city-search').setAttribute('aria-expanded', 'false');
+    return;
+  }
+  const now = currentInstant();
+  box.innerHTML = hits.map((h) => {
+    const w = wallPartsAt(h.zone, now);
+    return `<button class="wc-result" role="option" data-zone="${h.zone}" data-name="${h.name}">
+      <span>${h.name}</span>
+      <span class="wc-result-zone">${h.zone}</span>
+      <span class="wc-result-time">${String(w.hour).padStart(2, '0')}:${String(w.minute).padStart(2, '0')}</span>
+    </button>`;
+  }).join('');
+  box.classList.remove('hidden');
+  $('city-search').setAttribute('aria-expanded', 'true');
+});
+
+$('city-results').addEventListener('click', (e) => {
+  const btn = e.target.closest('.wc-result');
+  if (!btn) return;
+  addPlace(btn.dataset.zone, btn.dataset.name);
+  $('city-search').value = '';
+  $('city-results').classList.add('hidden');
+  $('city-search').setAttribute('aria-expanded', 'false');
+});
+
+$('clock-table').addEventListener('click', (e) => {
+  const btn = e.target.closest('.wc-remove');
+  if (!btn) return;
+  places = places.filter((p) => !(p.zone === btn.dataset.zone && p.name === btn.dataset.name));
+  syncHomeOptions();
+  render();
+});
+
+$('home-select').addEventListener('change', (e) => { homeZone = e.target.value; render(); });
+$('now-btn').addEventListener('click', () => { pinned = null; render(); });
+$('reset-btn').addEventListener('click', () => {
+  places = DEFAULTS.map((z) => ({ zone: z, name: nameForZone(z) }));
+  syncHomeOptions();
+  render();
+});
+$('time-slider').addEventListener('input', (e) => {
+  const minutes = Number(e.target.value);
+  const base = wallPartsAt(homeZone, currentInstant());
+  const res = instantFromWall(homeZone, {
+    year: base.year, month: base.month, day: base.day,
+    hour: Math.floor(minutes / 60), minute: minutes % 60,
+  });
+  pinned = res.instant;
+  render();
+  if (res.nonexistent) {
+    $('overlap-note').innerHTML = `<span class="wc-bad">That wall-clock time does not exist in
+      ${nameForZone(homeZone)}</span> — the clocks jump over it. Showing the instant they jump to.`;
+  } else if (res.ambiguous) {
+    $('overlap-note').innerHTML = `<span class="wc-warn">That time happens twice today in
+      ${nameForZone(homeZone)}</span> — the clocks go back. Showing the first one.`;
+  }
+});
+$('date-input').addEventListener('change', (e) => {
+  const [y, m, d] = e.target.value.split('-').map(Number);
+  if (!y) return;
+  const cur = wallPartsAt(homeZone, currentInstant());
+  pinned = instantFromWall(homeZone, { year: y, month: m, day: d, hour: cur.hour, minute: cur.minute }).instant;
+  render();
+});
+
+const HOURS = Array.from({ length: 25 }, (_, i) => i);
+$('work-start').innerHTML = HOURS.slice(0, 24).map((h) => `<option value="${h}"${h === 9 ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('');
+$('work-end').innerHTML = HOURS.slice(1).map((h) => `<option value="${h}"${h === 17 ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('');
+$('work-start').addEventListener('change', (e) => { workStart = Number(e.target.value); render(); });
+$('work-end').addEventListener('change', (e) => { workEnd = Number(e.target.value); render(); });
+
+$('copy-link-btn').addEventListener('click', async () => {
+  writeHash();
+  try {
+    await navigator.clipboard.writeText(location.href);
+    const toast = $('copy-toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1200);
+  } catch (e) { /* clipboard blocked; the address bar has it */ }
+});
+
+/* ---- the URL carries the setup ---- */
+
+function writeHash() {
+  const p = new URLSearchParams();
+  p.set('z', places.map((x) => x.zone).join(','));
+  p.set('home', homeZone);
+  p.set('w', `${workStart}-${workEnd}`);
+  if (pinned !== null) p.set('t', String(Math.floor(pinned / 60000)));
+  history.replaceState(null, '', `#${p.toString()}`);
+}
+
+function readHash() {
+  if (!location.hash || location.hash.length < 3) return false;
+  const p = new URLSearchParams(location.hash.slice(1));
+  const zones = (p.get('z') || '').split(',').filter((z) => ALL_ZONES.includes(z) || z === 'UTC');
+  if (!zones.length) return false;
+  places = zones.map((z) => ({ zone: z, name: nameForZone(z) }));
+  const home = p.get('home');
+  if (home && (ALL_ZONES.includes(home) || home === 'UTC')) homeZone = home;
+  const w = (p.get('w') || '').split('-').map(Number);
+  if (w.length === 2 && w.every((n) => Number.isInteger(n) && n >= 0 && n <= 24)) {
+    workStart = w[0];
+    workEnd = w[1];
+  }
+  const t = Number(p.get('t'));
+  if (Number.isFinite(t) && t > 0) pinned = t * 60000;
+  return true;
+}
+
+/* ---- headless hook ---- */
+
+window.__clock = {
+  offsetAt, wallPartsAt, instantFromWall, nextTransition, isDaylightSaving,
+  overlapGrid, bestWindows, hourClass, formatOffset, CITIES, searchPlaces,
+  get places() { return places.map((p) => ({ ...p })); },
+  set places(v) { places = v.map((p) => ({ ...p })); syncHomeOptions(); render(); },
+  setHome(z) { homeZone = z; syncHomeOptions(); render(); },
+  pin(ms) { pinned = ms; render(); },
+  get pinned() { return pinned; },
+  render,
+};
+
+/* ---- boot ---- */
+
+if (!readHash()) {
+  const here = homeZone;
+  places = [...new Set([here, ...DEFAULTS])].slice(0, 5).map((z) => ({ zone: z, name: nameForZone(z) }));
+}
+$('work-start').value = String(workStart);
+$('work-end').value = String(workEnd);
+syncHomeOptions();
+render();
+tickTimer = setInterval(() => { if (pinned === null) render(); }, 1000);
+</script>
+<!-- Slippy Deck: floating Slippy TV + jukebox player. Renders nothing unless admin.slippylabs.com/whoami confirms a signed-in account. -->
+<script defer src="https://slippylabs.com/deck/deck.js"></script>
+<!-- Slippy Labs sitewide privacy link. Self-contained on purpose: these sites
+     share no CSS, so it carries its own styles and inherits the page's text
+     colour instead of assuming a palette. position/z-index are load bearing --
+     the HUD theme's .starfield/.scanlines are fixed at z-index 0-1 and would
+     paint straight over an unpositioned footer.
+     The .page-wrap trim below is what keeps the bar on the first screen. -->
+<div class="sl-legal"><a href="https://slippylabs.com/privacy.html">Privacy</a></div>
+<style>
+.sl-legal{box-sizing:border-box;position:relative;z-index:3;height:64px;display:flex;align-items:center;justify-content:center;margin:0;padding:0 12px;font-family:"Consolas","SFMono-Regular",Menlo,Monaco,"Courier New",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.5}
+.sl-legal a{color:inherit;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 14px}
+.sl-legal a:hover,.sl-legal a:focus-visible{text-decoration:underline;opacity:1}
+/* This page centres .page-wrap at min-height:100vh, which would push the bar a
+   whole screen below the fold. Give back exactly the bar height instead of
+   adding a scrollbar to a page that had none. */
+.page-wrap{min-height:calc(100vh - 64px)}
+</style>
+</body>
+</html>
